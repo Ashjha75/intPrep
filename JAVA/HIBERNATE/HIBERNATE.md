@@ -611,200 +611,93 @@ public class StudentCourse {
 
 **Answer**: "In Spring Boot JPA applications, CascadeType.REMOVE propagates the delete operation from parent to child when the parent is explicitly deleted. orphanRemoval=true removes child entities when they're no longer referenced by a parent, such as when they're removed from a collection. orphanRemoval is typically used for entities that only make sense within their parent context, while CASCADE can be used more selectively based on the domain relationship semantics."
 
-## Understanding @JoinColumn in Detail
+## Understanding @JoinColumn - Key Points
 
-The `@JoinColumn` annotation is a crucial component for defining relationships in JPA and Hibernate. It specifies the foreign key column(s) used to join an entity association or element collection.
+The `@JoinColumn` annotation defines the foreign key column that links entities in a relationship.
 
-### Basic Usage and Syntax
-
-```java
-@Entity
-public class Employee {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @ManyToOne
-    @JoinColumn(name = "department_id")
-    private Department department;
-}
-```
-
-### @JoinColumn Attributes and Their Purposes
-
-1. **name**: 
-   - Specifies the name of the foreign key column in the owner entity's table
-   - Default: The referenced table name + "_" + the referenced column name
-   ```java
-   @JoinColumn(name = "dept_id")
-   ```
-
-2. **referencedColumnName**: 
-   - Specifies the name of the column in the referenced table that the foreign key references
-   - Default: The primary key column of the referenced table
-   ```java
-   @JoinColumn(referencedColumnName = "dept_unique_id")
-   ```
-
-3. **unique**: 
-   - Indicates whether the foreign key column has a unique constraint
-   - Particularly important in @OneToOne relationships to enforce true one-to-one cardinality
-   ```java
-   @OneToOne
-   @JoinColumn(unique = true)
-   ```
-
-4. **nullable**: 
-   - Specifies whether the foreign key column allows null values
-   - Setting to false creates a NOT NULL constraint in the database
-   ```java
-   @JoinColumn(nullable = false)
-   ```
-
-5. **insertable**: 
-   - Controls whether the column is included in SQL INSERT statements
-   - Useful for read-only relationships or when using database triggers
-   ```java
-   @JoinColumn(insertable = false)
-   ```
-
-6. **updatable**: 
-   - Controls whether the column is included in SQL UPDATE statements
-   - Useful for immutable relationships
-   ```java
-   @JoinColumn(updatable = false)
-   ```
-
-7. **columnDefinition**: 
-   - Allows defining the column's DDL SQL fragment directly
-   - Useful for database-specific features
-   ```java
-   @JoinColumn(columnDefinition = "BIGINT NOT NULL REFERENCES departments(id) ON DELETE CASCADE")
-   ```
-
-8. **foreignKey**: 
-   - Defines the foreign key constraint name and behavior
-   - Allows customizing referential actions like ON DELETE or ON UPDATE
-   ```java
-   @JoinColumn(foreignKey = @ForeignKey(name = "FK_EMPLOYEE_DEPARTMENT"))
-   ```
-
-9. **table**: 
-   - Specifies the table that contains the column (for secondary tables)
-   - Used when entity fields are mapped to multiple tables
-   ```java
-   @JoinColumn(table = "employee_details")
-   ```
-
-### Common Use Cases
-
-#### 1. Customizing Foreign Key Names
+### Essential Attributes
 
 ```java
-@Entity
-public class Order {
-    @ManyToOne
-    @JoinColumn(name = "customer_id", referencedColumnName = "id")
-    private Customer customer;
-}
+@ManyToOne
+@JoinColumn(
+    name = "department_id",           // Foreign key column name
+    referencedColumnName = "id",      // Referenced column (defaults to PK)
+    nullable = false,                 // Creates NOT NULL constraint
+    unique = true,                    // Creates UNIQUE constraint
+    foreignKey = @ForeignKey(name = "FK_EMPLOYEE_DEPT") // Names the FK constraint
+)
+private Department department;
 ```
 
-#### 2. Enforcing Required Relationships
+1. **name**: Names the foreign key column (default: referencedEntityName_referencedColumnName)
+2. **referencedColumnName**: Column being referenced (default: primary key)
+3. **nullable**: Whether the relationship is required (NOT NULL constraint)
+4. **unique**: Whether the relationship must be unique (essential for true @OneToOne)
 
+### Key Use Cases
+
+#### @OneToOne - Proper Foreign Key Configuration
 ```java
-@Entity
-public class Employee {
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "department_id", nullable = false)
-    private Department department;
-}
+// Owning side - has the foreign key
+@OneToOne
+@JoinColumn(name = "address_id", unique = true)
+private Address address;
+
+// Non-owning side - no column in database
+@OneToOne(mappedBy = "address")
+private Employee employee;
 ```
 
-#### 3. Creating a True One-to-One Relationship
-
+#### @ManyToOne - Required Relationship
 ```java
-@Entity
-public class User {
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "profile_id", unique = true)
-    private Profile profile;
-}
+@ManyToOne(optional = false)
+@JoinColumn(name = "department_id", nullable = false)
+private Department department;
 ```
 
-#### 4. Customizing the Foreign Key Constraint
-
+#### @OneToMany with @JoinColumn (Unidirectional without Join Table)
 ```java
-@Entity
-public class Post {
-    @ManyToOne
-    @JoinColumn(
-        name = "author_id",
-        foreignKey = @ForeignKey(
-            name = "FK_POST_AUTHOR",
-            foreignKeyDefinition = "FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL"
-        )
-    )
-    private User author;
-}
+@OneToMany
+@JoinColumn(name = "parent_id") // FK in child table
+private List<Child> children;
 ```
 
-#### 5. Creating a Read-Only Relationship
-
+#### Composite Foreign Keys with @JoinColumns
 ```java
-@Entity
-public class OrderItem {
-    @ManyToOne
-    @JoinColumn(name = "order_id", insertable = false, updatable = false)
-    private Order order;
-}
+@ManyToOne
+@JoinColumns({
+    @JoinColumn(name = "emp_id", referencedColumnName = "id"),
+    @JoinColumn(name = "emp_dept", referencedColumnName = "dept_code")
+})
+private Employee employee;
 ```
 
-### @JoinColumn vs @JoinColumns
+### Important Distinctions
 
-For composite foreign keys, use `@JoinColumns` to group multiple `@JoinColumn` definitions:
+1. **@JoinColumn vs mappedBy**: 
+   - @JoinColumn: Owning side, defines actual database column
+   - mappedBy: Non-owning side, no database column, references owning side field name
 
-```java
-@Entity
-public class EmployeeProject {
-    @ManyToOne
-    @JoinColumns({
-        @JoinColumn(name = "emp_id", referencedColumnName = "id"),
-        @JoinColumn(name = "emp_dept", referencedColumnName = "department_code")
-    })
-    private Employee employee;
-}
-```
+2. **@JoinColumn vs @PrimaryKeyJoinColumn**:
+   - @JoinColumn: Creates a separate foreign key column
+   - @PrimaryKeyJoinColumn: Primary key is also a foreign key (used in @OneToOne shared PK, joined inheritance)
 
-### @JoinColumn vs @PrimaryKeyJoinColumn
+3. **insertable=false, updatable=false**:
+   - Makes relationship read-only
+   - Essential when mapping same FK column twice
+   ```java
+   @ManyToOne
+   @JoinColumn(name = "dept_id", insertable = false, updatable = false)
+   private Department readOnlyDepartment;
+   ```
 
-While `@JoinColumn` defines a regular foreign key relationship, `@PrimaryKeyJoinColumn` is used when:
+### Interview Q&A
 
-1. The primary key of the entity is also a foreign key to another entity
-2. Mapping joined inheritance hierarchies
-3. Mapping secondary tables
+**Q: What happens if you don't specify @JoinColumn in a @ManyToOne relationship?**  
+A: "JPA uses default naming: referenced entity name + '_' + referenced PK column. For example, a Department entity with PK 'id' would create a 'department_id' foreign key."
 
-```java
-@Entity
-public class EmployeeDetails {
-    @Id
-    private Long id;
-    
-    @OneToOne
-    @PrimaryKeyJoinColumn
-    private Employee employee;
-}
-```
+**Q: What's the difference between @JoinColumn(nullable=false) and @ManyToOne(optional=false)?**  
+A: "@JoinColumn(nullable=false) creates a database-level NOT NULL constraint. @ManyToOne(optional=false) enforces validation at the JPA level. Best practice is to use both together for required relationships."
 
-### Common Interview Questions About @JoinColumn
-
-#### 1. What's the difference between @JoinColumn and mappedBy?
-
-**Answer**: "@JoinColumn is used on the owning side of a relationship to specify the foreign key column. The 'mappedBy' attribute is used on the non-owning (inverse) side to indicate that the relationship is mapped by another entity. They represent different sides of the same relationship - @JoinColumn defines where the foreign key exists in the database, while mappedBy indicates that another entity owns the relationship."
-
-#### 2. When would you use insertable=false and updatable=false with @JoinColumn?
-
-**Answer**: "Setting insertable=false and updatable=false makes a relationship read-only. This is useful when you want to map the same foreign key column twice (for different purposes), when implementing a view of data that shouldn't be modified directly, or when the database handles insertion/updates through triggers or stored procedures."
-
-#### 3. How do you create a bidirectional OneToOne relationship with proper foreign key configuration?
-
-**Answer**: "In a bidirectional OneToOne relationship, determine which entity should own the foreign key based on your domain model. On the owning side, use @OneToOne with @JoinColumn(unique=true) to ensure true one-to-one cardinality at the database level. On the non-owning side, use @OneToOne(mappedBy='fieldName') to indicate it's mapped by the other entity."
+**Q: How do you ensure a proper bidirectional @OneToOne relationship?**  
+A: "On the owning side, use @JoinColumn with unique=true to create a unique constraint. On the non-owning side, use mappedBy to reference the owning side's field. This ensures true one-to-one cardinality at the database level."
