@@ -13,8 +13,9 @@ INTPREP/
 │   └── GitCommands.md        # Git commands reference for interviews
 ├── JAVA/
 │   └── HIBERNATE/
-│       ├── HIBERNATE.md      # Comprehensive Hibernate notes
-│       └── INT_HIBERNATE.md  # Interview-specific Hibernate questions
+│       ├── HIBERNATE.md             # Comprehensive Hibernate notes
+│       ├── INT_HIBERNATE.md         # Interview-specific Hibernate questions
+│       └── JPA_JOIN_ANNOTATIONS.md  # Focused guide to JPA join annotations
 ├── JS/                       # JavaScript resources
 └── README.md                 # This file
 ```
@@ -34,6 +35,12 @@ Below are direct paths to important resources in this workspace:
   - Performance optimization techniques
   
 - [Hibernate Interview Questions](./JAVA/HIBERNATE/INT_HIBERNATE.md) - Focused interview Q&A for Hibernate
+
+- [JPA Join Annotations](./JAVA/HIBERNATE/JPA_JOIN_ANNOTATIONS.md) - Focused guide to JPA join annotations:
+  - Complete @JoinColumn reference with all attributes explained
+  - @JoinTable usage for many-to-many relationships
+  - Common usage patterns and examples
+  - Interview questions with detailed answers
 
 ### Development Tools
 - [Git Commands Cheat Sheet](./EXTRA/GitCommands.md) - Essential Git commands for interviews and daily use
