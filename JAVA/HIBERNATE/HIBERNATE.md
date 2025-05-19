@@ -963,3 +963,42 @@ A: "Use @JoinColumns when implementing a relationship with a composite foreign k
 
 **Q: In a @ManyToMany relationship, what happens if you don't specify @JoinTable?**  
 A: "JPA will create a default join table with a generated name following the pattern: owning_entity_name + '_' + referenced_entity_collection_name. The foreign key columns will also use default naming conventions. While this works, explicitly defining @JoinTable is better for readability and control."
+
+# Hibernate CRUD Operations Comparison
+
+Hibernate offers multiple methods for similar CRUD operations. Below is a comparison table of these similar operations with key differences and examples.
+
+## Save vs Persist
+
+| Operation | Method | Return Type | Behavior | When to Use | Example |
+|-----------|--------|-------------|----------|------------|---------|
+| **Save** | `save()` | Object ID | - Immediately assigns an ID<br>- Returns generated ID<br>- Can be used outside transaction | When you need the ID immediately | ```session.save(employee); Long id = employee.getId(); // ID available``` |
+| **Persist** | `persist()` | void | - ID assignment may be delayed<br>- No return value<br>- Must be inside transaction | When working within transaction boundaries | ```session.beginTransaction(); session.persist(employee); session.getTransaction().commit();``` |
+
+## Get vs Load
+
+| Operation | Method | Behavior | Exception Handling | Proxy | When to Use | Example |
+|-----------|--------|----------|-------------------|-------|------------|---------|
+| **Get** | `get()` | - Hits database immediately<br>- Returns null if not found | Returns null for non-existent ID | Returns actual object | When you need to verify existence | ```Employee emp = session.get(Employee.class, 1L); if(emp != null) { // process }``` |
+| **Load** | `load()` | - Lazy loading<br>- Returns proxy initially | Throws ObjectNotFoundException for non-existent ID | Returns proxy first | When you're certain the object exists | ```Employee emp = session.load(Employee.class, 1L); String name = emp.getName(); // Actual DB hit occurs here``` |
+
+## Update vs Merge
+
+| Operation | Method | Use Case | Behavior | When to Use | Example |
+|-----------|--------|----------|----------|------------|---------|
+| **Update** | `update()` | - For detached objects<br>- Must include all properties | - Forces object to persistent state<br>- Throws error if another persistent instance exists with same ID | When you know object is detached and have full state | ```session.update(employee); // Will throw error if duplicate exists``` |
+| **Merge** | `merge()` | - For detached objects<br>- Can handle partial updates | - Creates copy of object in persistent state<br>- Returns managed instance<br>- Safer with concurrent sessions | When handling detached objects from multiple sources | ```Employee managed = (Employee)session.merge(detachedEmployee); // Returns managed instance``` |
+
+## SaveOrUpdate vs Merge
+
+| Operation | Method | Behavior | Entity State | When to Use | Example |
+|-----------|--------|----------|-------------|------------|---------|
+| **SaveOrUpdate** | `saveOrUpdate()` | - Calls save() for new entity<br>- Calls update() for existing entity | - Must know if entity is transient or detached | When you know entity state but don't care if save or update | ```session.saveOrUpdate(employee); // Save if new, update if existing``` |
+| **Merge** | `merge()` | - Creates new instance if not exists<br>- Copies state to persistent instance if exists | - Doesn't need to know entity state<br>- Always returns persistent instance | When entity state is unknown or from different session | ```Employee managed = (Employee)session.merge(employee); // Always returns managed instance``` |
+
+## Delete vs Remove
+
+| Operation | Method | Scope | Cascading | When to Use | Example |
+|-----------|--------|-------|-----------|------------|---------|
+| **Delete** | `delete()` | Hibernate-specific | Based on cascade settings | When working directly with Hibernate Session | ```session.delete(employee); // Hibernate specific``` |
+| **Remove** | `remove()` | JPA standard | Based on cascade settings | When working with JPA EntityManager | ```entityManager.remove(employee); // JPA standard``` |
