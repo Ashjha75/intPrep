@@ -144,11 +144,10 @@ private Set<Child> children = new HashSet<>();
 
 # Hibernate/JPA Relationships
 
-Entity relationships are a fundamental concept in Hibernate and JPA. They define how objects are related to each other and how these relationships are mapped to the database schema.
 
-## Relationship Annotations and Their Attributes
+Entity relationships are a fundamental concept in JPA that define how Java objects are related to each other and mapped to database tables. This guide focuses on standard JPA relationships commonly used in Spring Boot applications.
 
-Before diving into specific relationship types, let's understand the common attributes that can be used with relationship annotations:
+## Core Relationship Annotations and Their Attributes
 
 ### Common Relationship Attributes
 
@@ -201,11 +200,6 @@ Before diving into specific relationship types, let's understand the common attr
    @JoinColumn(unique = true)
    ```
 
-5. **insertable/updatable**: Controls whether the column is included in SQL INSERT/UPDATE statements
-   ```java
-   @JoinColumn(insertable = true, updatable = false)
-   ```
-
 ### @JoinTable Attributes
 
 1. **name**: The name of the join table
@@ -228,9 +222,9 @@ Before diving into specific relationship types, let's understand the common attr
    @JoinTable(uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "course_id"}))
    ```
 
-## Types of Relationships in Hibernate/JPA
+## Types of JPA Relationships
 
-Hibernate supports four main types of relationships between entities:
+JPA supports four main types of relationships between entities:
 
 ### 1. @OneToOne Relationship
 
@@ -246,7 +240,7 @@ public class Employee {
     private String name;
     
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "address_id", referencedColumnName = "id", nullable = false)
+    @JoinColumn(name = "address_id", nullable = false)
     private Address address;
     
     // Getters and setters
@@ -261,18 +255,18 @@ public class Address {
     private String street;
     private String city;
     
-    @OneToOne(mappedBy = "address", fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "address")
     private Employee employee;
     
     // Getters and setters
 }
 ```
 
-**Important @OneToOne Specific Attributes**:
+**Key @OneToOne Attributes**:
 - `optional = false`: Makes the relationship mandatory (triggers NOT NULL constraint)
 - `@JoinColumn(unique = true)`: Ensures the relationship is truly one-to-one at the database level
 
-**Interview Answer**: "A @OneToOne relationship connects two entities in a 1:1 relationship. For instance, an Employee has one Address and an Address belongs to one Employee. The relationship can be unidirectional or bidirectional. In bidirectional relationships, the 'mappedBy' attribute designates the non-owning side. Setting optional=false ensures the relationship is mandatory, and a unique constraint on the join column enforces true one-to-one cardinality at the database level."
+**Interview Answer**: "A @OneToOne relationship connects two entities in a 1:1 relationship. For instance, an Employee has one Address and an Address belongs to one Employee. In bidirectional relationships, the 'mappedBy' attribute designates the non-owning side. Setting optional=false ensures the relationship is mandatory."
 
 ### 2. @OneToMany / @ManyToOne Relationship
 
@@ -294,7 +288,6 @@ public class Department {
         fetch = FetchType.LAZY
     )
     @OrderBy("name ASC")  // Sort collection by name
-    @BatchSize(size = 20) // Batch loading optimization
     private List<Employee> employees = new ArrayList<>();
     
     // Helper methods for bidirectional relationship maintenance
@@ -320,26 +313,18 @@ public class Employee {
     private String name;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id", foreignKey = @ForeignKey(name = "FK_EMPLOYEE_DEPARTMENT"))
+    @JoinColumn(name = "department_id")
     private Department department;
     
     // Getters and setters
 }
 ```
 
-**Important @OneToMany Specific Attributes**:
+**Key @OneToMany / @ManyToOne Attributes**:
 - `orphanRemoval = true`: Removes child entities when they're removed from the collection
 - `@OrderBy`: Specifies the ordering of the collection elements (SQL ORDER BY)
-- `@OrderColumn`: Maintains a position/order column in the database
-- `@BatchSize`: Configures batch loading to optimize collection fetching
-- `@Where`: Filters the collection using a SQL WHERE clause
-- `@Filter`: Allows for dynamic filtering of collection elements
 
-**Important @ManyToOne Specific Attributes**:
-- `foreignKey = @ForeignKey(name = "...")`: Names the foreign key constraint
-- `optional = false`: Specifies that the association is required (NOT NULL constraint)
-
-**Interview Answer**: "A @OneToMany relationship allows an entity to have a collection of other entities. For example, a Department can have many Employees. It's typically paired with @ManyToOne on the other side for a bidirectional relationship. The @ManyToOne side is usually the owning side and contains the foreign key. To maintain relationship integrity, it's good practice to implement helper methods in the parent entity that manage both sides of the relationship. Additional attributes like @OrderBy, @BatchSize and @Filter can optimize collection handling and querying. The @ManyToOne side can specify foreign key constraints and whether the association is mandatory."
+**Interview Answer**: "A @OneToMany relationship allows an entity to have a collection of other entities. For example, a Department can have many Employees. It's typically paired with @ManyToOne on the other side for a bidirectional relationship. The @ManyToOne side is usually the owning side and contains the foreign key. To maintain relationship integrity, implement helper methods in the parent entity to manage both sides of the relationship."
 
 ### 3. @ManyToMany Relationship
 
@@ -364,11 +349,8 @@ public class Student {
         inverseJoinColumns = @JoinColumn(name = "course_id"),
         uniqueConstraints = @UniqueConstraint(
             columnNames = {"student_id", "course_id"}
-        ),
-        foreignKey = @ForeignKey(name = "FK_STUDENT_COURSE"),
-        inverseForeignKey = @ForeignKey(name = "FK_COURSE_STUDENT")
+        )
     )
-    @BatchSize(size = 30)
     @OrderBy("name ASC")
     private Set<Course> courses = new HashSet<>();
     
@@ -404,19 +386,11 @@ public class Course {
 }
 ```
 
-**Important @ManyToMany Specific Attributes**:
-- `@JoinTable`: Defines the join table structure:
-  - `name`: Name of the join table
-  - `joinColumns`: Columns referring to the owning side entity
-  - `inverseJoinColumns`: Columns referring to the non-owning side entity
-  - `uniqueConstraints`: Ensures no duplicate relationships
-  - `foreignKey`/`inverseForeignKey`: Names and customizes the foreign key constraints
+**Key @ManyToMany Attributes**:
+- `@JoinTable`: Defines the join table structure with appropriate columns and constraints
+- `uniqueConstraints`: Ensures no duplicate relationships
 
-- `@MapKeyColumn`: For Map collections, specifies the map key column
-- `@MapKeyJoinColumn`: For entity-based map keys
-- `@MapKeyEnumerated`/`@MapKeyTemporal`: For enum or temporal map keys
-
-**Interview Answer**: "A @ManyToMany relationship connects entities where each can be related to multiple instances of the other. For example, Students can enroll in multiple Courses, and each Course can have multiple Students. It requires a join table in the database that contains foreign keys to both entities. The @JoinTable annotation configures this table, including its name, foreign key columns, and constraints. For optimal performance, it's important to use LAZY fetching and consider using helper methods to maintain both sides of the relationship consistently. Hibernate provides additional annotations like @MapKeyColumn for mapping Maps and @OrderBy for controlling collection ordering."
+**Interview Answer**: "A @ManyToMany relationship connects entities where each can be related to multiple instances of the other. For example, Students can enroll in multiple Courses, and each Course can have multiple Students. It requires a join table with foreign keys to both entities. Helper methods maintain bidirectional relationship consistency."
 
 ### 4. Self-Referencing Relationship
 
@@ -432,14 +406,14 @@ public class Employee {
     private String name;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "manager_id", foreignKey = @ForeignKey(name = "FK_EMP_MANAGER"))
+    @JoinColumn(name = "manager_id")
     private Employee manager;
     
-    @OneToMany(mappedBy = "manager", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "manager", fetch = FetchType.LAZY)
     @OrderBy("name ASC")
     private List<Employee> subordinates = new ArrayList<>();
     
-    // Helper methods for maintaining relationship integrity
+    // Helper methods for relationship maintenance
     public void addSubordinate(Employee employee) {
         subordinates.add(employee);
         employee.setManager(this);
@@ -454,11 +428,11 @@ public class Employee {
 }
 ```
 
-**Interview Answer**: "Self-referencing relationships allow entities to relate to instances of the same entity type. A common example is an Employee-Manager relationship, where each Employee can have one Manager and a Manager can have multiple subordinate Employees. These relationships use the same annotations as regular relationships but reference the same entity class. It's important to be careful with cascading operations in self-referencing relationships to avoid infinite loops or unexpected deletions."
+**Interview Answer**: "Self-referencing relationships allow entities to relate to instances of the same entity type. A common example is an Employee-Manager relationship, where each Employee can have one Manager and a Manager can have multiple subordinate Employees. These use the same annotations as regular relationships but reference the same entity class."
 
-## Additional Relationship Mapping Strategies and Attributes
+## Additional JPA Mapping Features
 
-### Embeddable Objects and @Embedded
+### @Embedded and @Embeddable
 
 Embedding value objects directly into an entity:
 
@@ -473,15 +447,15 @@ public class Employee {
     
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "line1", column = @Column(name = "home_address_line1")),
-        @AttributeOverride(name = "city", column = @Column(name = "home_address_city"))
+        @AttributeOverride(name = "street", column = @Column(name = "home_street")),
+        @AttributeOverride(name = "city", column = @Column(name = "home_city"))
     })
     private Address homeAddress;
     
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "line1", column = @Column(name = "work_address_line1")),
-        @AttributeOverride(name = "city", column = @Column(name = "work_address_city"))
+        @AttributeOverride(name = "street", column = @Column(name = "work_street")),
+        @AttributeOverride(name = "city", column = @Column(name = "work_city"))
     })
     private Address workAddress;
     
@@ -490,7 +464,7 @@ public class Employee {
 
 @Embeddable
 public class Address {
-    private String line1;
+    private String street;
     private String city;
     private String zipCode;
     
@@ -500,7 +474,7 @@ public class Address {
 
 **Interview Answer**: "The @Embeddable and @Embedded annotations allow you to reuse a class across multiple entities without creating separate tables. The embedded object's fields are mapped directly to columns in the containing entity's table. @AttributeOverrides let you customize column names when embedding the same type multiple times."
 
-### Element Collections
+### @ElementCollection
 
 Mapping collections of basic or embeddable types:
 
@@ -532,259 +506,43 @@ public class Employee {
 }
 ```
 
-**Interview Answer**: "@ElementCollection allows you to map collections of basic types (String, Integer) or embeddable objects without needing to create full entity classes for them. It creates a separate collection table with a foreign key to the owning entity. This is ideal for simple value collections that don't need their own identity."
+**Interview Answer**: "@ElementCollection allows you to map collections of basic types or embeddable objects without creating full entity classes. It creates a separate collection table with a foreign key to the owning entity, ideal for simple value collections that don't need their own identity."
 
-### @Any and @ManyToAny for Polymorphic Associations
+## Key Spring Boot JPA Relationship Practices
 
-Used for mapping relationships to multiple entity types:
+### Handling Bidirectional Relationships
+
+To maintain bidirectional relationship consistency, implement helper methods:
 
 ```java
 @Entity
-public class Comment {
+public class Parent {
     @Id
     @GeneratedValue
     private Long id;
     
-    private String text;
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Child> children = new HashSet<>();
     
-    @Any
-    @JoinColumn(name = "content_id")
-    @JoinTable(
-        name = "comment_content",
-        joinColumns = @JoinColumn(name = "comment_id"),
-        inverseJoinColumns = @JoinColumn(name = "content_id")
-    )
-    @AnyMetaDef(
-        idType = "long",
-        metaType = "string",
-        metaValues = {
-            @MetaValue(targetEntity = Post.class, value = "P"),
-            @MetaValue(targetEntity = Image.class, value = "I"),
-            @MetaValue(targetEntity = Video.class, value = "V")
-        }
-    )
-    @Column(name = "content_type")
-    private Commentable content;
+    // Helper methods
+    public void addChild(Child child) {
+        children.add(child);
+        child.setParent(this);
+    }
     
-    // Getters and setters
+    public void removeChild(Child child) {
+        children.remove(child);
+        child.setParent(null);
+    }
 }
 ```
 
-**Interview Answer**: "@Any and @ManyToAny annotations enable polymorphic associations where a field can reference entities of different types. This is useful when you need to implement a feature like comments that can be attached to various entity types (posts, images, videos). It's a Hibernate-specific feature that provides more flexibility than standard JPA relationships."
+### Implementing Many-to-Many with Attributes
 
-### Ordering and Sorting Collections
-
-```java
-// Database-level ordering
-@OneToMany(mappedBy = "post")
-@OrderBy("creationDate DESC")
-private List<Comment> comments = new ArrayList<>();
-
-// Application-level sorting
-@OneToMany(mappedBy = "post")
-@org.hibernate.annotations.Sort(
-    type = org.hibernate.annotations.SortType.NATURAL
-)
-private SortedSet<Comment> sortedComments = new TreeSet<>();
-```
-
-**Interview Answer**: "Hibernate offers multiple ways to order collections. @OrderBy performs database-level sorting using an SQL ORDER BY clause, while @Sort handles in-memory sorting with Java comparators. @OrderColumn maintains an explicit position column in the database table that stores the collection elements' order."
-
-### Native SQL Customization
+For many-to-many relationships with additional attributes:
 
 ```java
-@Entity
-@Table(name = "employees")
-@SQLInsert(sql = "INSERT INTO employees (id, name, version, created_at) VALUES (?, ?, ?, NOW())")
-@SQLUpdate(sql = "UPDATE employees SET name = ?, version = ? WHERE id = ? AND version = ?")
-public class Employee {
-    // Entity fields
-}
-```
-
-**Interview Answer**: "Hibernate allows customizing the SQL statements used for CRUD operations with annotations like @SQLInsert, @SQLUpdate, and @SQLDelete. This is useful for implementing advanced database features like auditing, soft deletes, or optimistic locking that require custom SQL logic."
-
-### Formula and Derived Properties
-
-```java
-@Entity
-public class Product {
-    @Id
-    private Long id;
-    
-    private BigDecimal price;
-    private BigDecimal taxRate;
-    
-    @Formula("price * tax_rate")
-    private BigDecimal priceWithTax;
-    
-    // Getters and setters
-}
-```
-
-**Interview Answer**: "The @Formula annotation allows you to define a calculated property using a SQL expression. The database calculates this value when the entity is loaded, and it's read-only in the entity. This is useful for derived properties that depend on multiple columns or require complex calculations."
-
-## Advanced Relationship Features
-
-### Inheritance Mapping Strategies
-
-Hibernate provides several strategies for mapping inheritance hierarchies:
-
-#### 1. Single Table Strategy (@Inheritance)
-
-```java
-@Entity
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "payment_type", discriminatorType = DiscriminatorType.STRING)
-public abstract class Payment {
-    @Id
-    @GeneratedValue
-    private Long id;
-    private BigDecimal amount;
-    // Common fields and methods
-}
-
-@Entity
-@DiscriminatorValue("CC")
-public class CreditCardPayment extends Payment {
-    private String cardNumber;
-    private String expiryDate;
-    // Credit card specific fields and methods
-}
-
-@Entity
-@DiscriminatorValue("BA")
-public class BankTransferPayment extends Payment {
-    private String bankName;
-    private String accountNumber;
-    // Bank transfer specific fields and methods
-}
-```
-
-**Interview Answer**: "Single table inheritance maps an entire class hierarchy to a single database table. It uses a discriminator column to identify which subclass each row represents. This approach offers the best performance but can lead to many nullable columns if subclasses have many specific fields."
-
-#### 2. Joined Table Strategy
-
-```java
-@Entity
-@Inheritance(strategy = InheritanceType.JOINED)
-public abstract class Payment {
-    @Id
-    @GeneratedValue
-    private Long id;
-    private BigDecimal amount;
-    // Common fields and methods
-}
-
-@Entity
-@PrimaryKeyJoinColumn(name = "payment_id")
-public class CreditCardPayment extends Payment {
-    private String cardNumber;
-    private String expiryDate;
-    // Credit card specific fields
-}
-
-@Entity
-@PrimaryKeyJoinColumn(name = "payment_id")
-public class BankTransferPayment extends Payment {
-    private String bankName;
-    private String accountNumber;
-    // Bank transfer specific fields
-}
-```
-
-**Interview Answer**: "Joined table inheritance uses a separate table for each class in the hierarchy, with foreign key relationships between parent and child tables. This normalizes the data structure but requires joins when querying subclasses, which can impact performance for deep hierarchies."
-
-#### 3. Table Per Class Strategy
-
-```java
-@Entity
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-public abstract class Payment {
-    @Id
-    @GeneratedValue
-    private Long id;
-    private BigDecimal amount;
-    // Common fields and methods
-}
-
-@Entity
-public class CreditCardPayment extends Payment {
-    private String cardNumber;
-    private String expiryDate;
-    // Credit card specific fields
-}
-
-@Entity
-public class BankTransferPayment extends Payment {
-    private String bankName;
-    private String accountNumber;
-    // Bank transfer specific fields
-}
-```
-
-**Interview Answer**: "Table per class strategy creates a separate table for each concrete class in the hierarchy, with all fields (including those inherited from parent classes). This approach avoids joins but makes polymorphic queries inefficient as they need to use UNION operations across tables."
-
-### Native Hibernate Collection Types
-
-Hibernate supports specialized collection mappings beyond standard JPA:
-
-```java
-@Entity
-public class User {
-    @Id
-    @GeneratedValue
-    private Long id;
-    
-    // Sorted collections
-    @OneToMany(mappedBy = "user")
-    @SortNatural
-    private SortedSet<Post> postsBySortOrder = new TreeSet<>();
-    
-    // Bags (allow duplicates, no order)
-    @ElementCollection
-    @CollectionType(type = "org.hibernate.collection.internal.PersistentBag")
-    private Collection<String> tags = new ArrayList<>();
-    
-    // Maps with entity keys
-    @ManyToMany
-    @MapKeyJoinColumn(name = "role_id")
-    private Map<Role, Permission> rolePermissions = new HashMap<>();
-    
-    // Lists with index column
-    @OneToMany
-    @OrderColumn(name = "position")
-    private List<Task> orderedTasks = new ArrayList<>();
-}
-```
-
-**Interview Answer**: "Hibernate supports specialized collection mappings beyond standard JPA including sorted collections with @SortNatural/@SortComparator, bags (collections that allow duplicates without order), indexed lists with @OrderColumn, and various map implementations with different key types (@MapKeyJoinColumn, @MapKeyColumn, etc.)."
-
-## Common Interview Questions About Relationships in Hibernate
-
-### 1. What's the difference between a unidirectional and bidirectional relationship?
-
-**Answer**: "A unidirectional relationship allows navigation in only one direction, while a bidirectional relationship allows navigation in both directions. For example, in a unidirectional One-to-Many, a Parent can access its Children, but Children can't access their Parent. In a bidirectional relationship, both can access each other. Bidirectional relationships offer better navigability but require consistent management on both sides to maintain data integrity."
-
-### 2. How do you choose between FetchType.EAGER and FetchType.LAZY?
-
-**Answer**: "You should generally prefer LAZY loading to avoid performance issues, especially for collections. EAGER loading can lead to the N+1 query problem or excessive data loading. However, EAGER might be appropriate for associations that are always needed with the main entity and are relatively small and stable. The default fetch strategies are EAGER for @ManyToOne and @OneToOne, and LAZY for @OneToMany and @ManyToMany. It's important to override these defaults based on your application's access patterns."
-
-### 3. What is the N+1 query problem and how can you solve it?
-
-**Answer**: "The N+1 query problem occurs when you fetch N entities and then access a lazily-loaded collection for each, resulting in N additional queries. Solutions include:
-1. Using join fetch in JPQL queries: `SELECT d FROM Department d JOIN FETCH d.employees`
-2. Using EntityGraph for specific use cases: `@EntityGraph(attributePaths = {"employees"})`
-3. Implementing batch fetching with `@BatchSize` annotation
-4. Using the `@Fetch(FetchMode.SUBSELECT)` annotation
-5. Creating DTO projections that load exactly what's needed in a single query
-6. Leveraging second-level caching for frequently accessed entities"
-
-### 4. How would you implement a many-to-many relationship with additional attributes on the relationship?
-
-**Answer**: "I would create an explicit entity for the join table instead of using @ManyToMany. For example, with Students and Courses, I'd create a StudentCourse entity with additional fields like enrollmentDate or grade, and then use two @OneToMany/@ManyToOne relationships."
-
-```java
+// Instead of @ManyToMany, use an entity for the join table
 @Entity
 public class StudentCourse {
     @Id
@@ -799,81 +557,56 @@ public class StudentCourse {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
     
-    private Date enrollmentDate;
+    private LocalDate enrollmentDate;
     private String grade;
     
-    // Constructor for easy relationship creation
-    public StudentCourse(Student student, Course course) {
-        this.student = student;
-        this.course = course;
-        this.enrollmentDate = new Date();
-    }
-    
-    // Appropriate equals and hashCode methods
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof StudentCourse)) return false;
-        StudentCourse that = (StudentCourse) o;
-        return Objects.equals(student.getId(), that.student.getId()) &&
-               Objects.equals(course.getId(), that.course.getId());
-    }
-    
-    @Override
-    public int hashCode() {
-        return Objects.hash(student.getId(), course.getId());
-    }
-    
-    // Getters and setters
+    // Constructors, getters, setters
 }
 ```
 
-### 5. What are the implications of cascade operations in relationships?
+## Common Interview Questions About JPA Relationships in Spring Boot
 
-**Answer**: "Cascading operations can simplify entity management but must be used carefully. For example, CascadeType.REMOVE on a @OneToMany relationship means deleting a parent will delete all children. This might be desirable for strong ownership relationships but dangerous for others. It's generally safer to specify exactly which operations should cascade rather than using CascadeType.ALL. Performance implications are also important to consider, especially with large object graphs. In bidirectional relationships, cascading from both sides can lead to infinite loops during operations like persist or remove."
+### 1. What's the difference between a unidirectional and bidirectional relationship?
 
-### 6. How can you optimize the performance of entity relationships?
+**Answer**: "A unidirectional relationship allows navigation in only one direction, while a bidirectional relationship allows navigation in both directions. For example, in a unidirectional One-to-Many, a Parent can access its Children, but Children can't access their Parent. Bidirectional relationships provide navigational access from both sides but require more maintenance to ensure consistency."
 
-**Answer**: "Several strategies can optimize relationship performance:
-1. Use appropriate fetch types (usually LAZY) based on access patterns
-2. Implement strategic use of join fetches with JPQL or Criteria API
-3. Use EntityGraph for specific use cases that need related entities
-4. Configure batch fetching with @BatchSize to reduce the number of queries
-5. Implement pagination for large collections using setFirstResult/setMaxResults
-6. Use database-level ordering with @OrderBy instead of in-memory sorting
-7. Consider second-level caching for frequently accessed entities and collections
-8. Use read-only transactions for queries that don't modify data
-9. Create specific DTO projections for read operations to avoid loading unnecessary data
-10. Optimize equals/hashCode implementation for entities in collections"
+### 2. How do you choose between FetchType.EAGER and FetchType.LAZY?
 
-### 7. What's the difference between @JoinColumn and @JoinTable?
+**Answer**: "In Spring Boot applications, you should generally prefer LAZY loading to avoid performance issues, especially for collections. EAGER loading can lead to the N+1 query problem or excessive data loading. The default fetch strategies are EAGER for @ManyToOne and @OneToOne, and LAZY for @OneToMany and @ManyToMany. It's important to override these defaults based on your application's access patterns."
 
-**Answer**: "The @JoinColumn annotation is used in @OneToOne and @ManyToOne relationships to specify the foreign key column directly in the owning entity's table. It allows customization of the foreign key column name, constraints, and other properties. @JoinTable is used primarily in @ManyToMany relationships to define an intermediate join table that contains foreign keys to both entities in the relationship. It allows specifying the join table name, its columns, and constraints. @JoinTable can also be used with @OneToMany relationships to implement a unidirectional one-to-many relationship without requiring a mappedBy attribute."
+### 3. What is the N+1 query problem and how can you solve it in Spring Boot?
 
-### 8. How do you handle bidirectional relationship consistency?
+**Answer**: "The N+1 query problem occurs when you fetch N entities and then access a lazily-loaded collection for each, resulting in N additional queries. In Spring Boot with JPA, solutions include:
+1. Using join fetch in JPQL queries: `@Query(\"SELECT d FROM Department d JOIN FETCH d.employees\")`
+2. Using EntityGraph: `@EntityGraph(attributePaths = {\"employees\"})`
+3. Implementing batch fetching with `spring.jpa.properties.hibernate.batch_fetch_size`
+4. Creating DTO projections with Spring Data JPA interfaces or custom queries"
 
-**Answer**: "To maintain bidirectional relationship consistency, it's essential to update both sides of the relationship in synchronized helper methods. For example, in a Parent-Child relationship:
+### 4. What are the implications of cascade operations in Spring Boot JPA relationships?
 
-```java
-public void addChild(Child child) {
-    this.children.add(child);
-    child.setParent(this);
-}
+**Answer**: "Cascading operations simplify entity management but must be used carefully. For example, CascadeType.REMOVE on a @OneToMany relationship means deleting a parent will delete all children. This might be desirable for strong ownership relationships but dangerous for others. In Spring Boot applications, it's generally safer to specify exactly which operations should cascade rather than using CascadeType.ALL. Be especially careful with bidirectional relationships where cascading from both sides can lead to infinite loops."
 
-public void removeChild(Child child) {
-    this.children.remove(child);
-    child.setParent(null);
-}
-```
+### 5. How can you optimize the performance of JPA relationships in Spring Boot?
 
-These methods ensure that both sides stay consistent. Without them, you risk orphaned records or inconsistent state when objects are detached and later merged back to the persistence context."
+**Answer**: "To optimize JPA relationship performance in Spring Boot:
+1. Configure appropriate fetch types (usually LAZY) based on access patterns
+2. Use Spring Data JPA's query methods with fetch joins where needed
+3. Configure proper pagination for large collections
+4. Enable second-level caching for frequently accessed entities
+5. Use read-only transactions for queries (`@Transactional(readOnly = true)`)
+6. Create specific DTO projections for read operations
+7. Implement equals/hashCode correctly for entities in collections
+8. Use @OrderBy for database-level sorting instead of in-memory sorting"
 
-### 9. How do you choose the right collection type for entity relationships?
+### 6. How do you handle lazy loading in Spring Boot web applications?
 
-**Answer**: "The choice depends on your requirements:
-- Use `List` when order is important or duplicates are allowed
-- Use `Set` when you need uniqueness and order isn't important
-- Use `Map` when you need key-based access to related entities
-- Use `SortedSet` or `SortedMap` when you need sorted collections
+**Answer**: "Lazy loading in Spring Boot web applications can cause LazyInitializationException when accessing lazy collections outside a transaction. Solutions include:
+1. Using the Open Session In View pattern (spring.jpa.open-in-view=true, enabled by default)
+2. Fetch the required data within the service layer using JPQL with fetch joins
+3. Use DTOs to transfer only the needed data to the presentation layer
+4. Apply @Transactional at the service layer to ensure the session remains open
+5. Use EntityGraph to define which associations should be loaded eagerly for specific queries"
 
-Each has performance implications. Sets and Maps use hashCode/equals for lookups, while Lists may require full traversal. For large collections, Sets typically offer better performance for contains/remove operations. Always implement equals/hashCode correctly for entities stored in Set or Map collections."
+### 7. What's the difference between CascadeType.REMOVE and orphanRemoval=true in Spring Boot JPA?
+
+**Answer**: "In Spring Boot JPA applications, CascadeType.REMOVE propagates the delete operation from parent to child when the parent is explicitly deleted. orphanRemoval=true removes child entities when they're no longer referenced by a parent, such as when they're removed from a collection. orphanRemoval is typically used for entities that only make sense within their parent context, while CASCADE can be used more selectively based on the domain relationship semantics."
